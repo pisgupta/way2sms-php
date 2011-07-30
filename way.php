@@ -78,7 +78,16 @@ class way2sms
 	{
 		$fields = array('username'=>$username, 'password'=>$password, 'login'=>'Login');
 		//get cookies
-		$this->curl_request($this->INDEXURL, 0, false);
+		$redirect = $this->curl_request($this->INDEXURL, 0, false);
+		// check for redirect
+		if(preg_match('#Location: (.*)#', $redirect, $finalUrl)) {
+			$finalUrl = parse_url(trim($finalUrl[1]));
+			$this->DOMAIN = "http://" . $finalUrl["host"];
+			$this->__construct();
+			// get cookies again
+			$this->curl_request($this->INDEXURL, 0, false);
+		}
+
 		//authenticate
 		$auth_response = $this->curl_request($this->AUTHURL, $fields, true);
 		if($auth_response == "-1") // auth failure
@@ -95,12 +104,18 @@ class way2sms
 	{
 		if($this->isloggedin)
 		{
-			$msg_parts = str_split($msg, 130);
-			$i = 1;
-			foreach($msg_parts as $msg_part)
-			{
-				$count_string = " [" . $i++ . "/" . count($msg_parts) . "]";
-				$fields = array('HiddenAction'=>'instantsms', 'catnamedis'=>'Birthday', 'Action'=>$this->action,'chkall'=>'on', 'MobNo'=>$to, 'textArea'=>urlencode($msg_part . $count_string));
+			// only split if the message length is greater than 140
+			if (strlen($msg) > 140) {
+				$msg_parts = str_split($msg, 130);
+				$i = 1;
+				foreach($msg_parts as $msg_part)
+				{
+					$count_string = " [" . $i++ . "/" . count($msg_parts) . "]";
+					$fields = array('HiddenAction'=>'instantsms', 'catnamedis'=>'Birthday', 'Action'=>$this->action,'chkall'=>'on', 'MobNo'=>$to, 'textArea'=>urlencode($msg_part . $count_string));
+					$this->curl_request($this->SMSURL, $fields, true);
+				}
+			} else {
+				$fields = array('HiddenAction'=>'instantsms', 'catnamedis'=>'Birthday', 'Action'=>$this->action,'chkall'=>'on', 'MobNo'=>$to, 'textArea'=>urlencode($msg));
 				$this->curl_request($this->SMSURL, $fields, true);
 			}
 			return true;

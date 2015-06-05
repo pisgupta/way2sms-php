@@ -1,0 +1,1 @@
+This is a php library that can be used with ease (no setup) for messaging using the way2sms gateway.
